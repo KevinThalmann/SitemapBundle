@@ -1,0 +1,14 @@
+{
+    "name": "ongoing/sitemap-bundle",
+    "description": "Generates a sitemap from a yaml configuration file",
+    "require": {
+        "symfony/yaml": "~3.0@dev"
+    },
+    "authors": [
+        {
+            "name": "Kevin Thalmann",
+            "email": "kevin.thalmann@ongoing.ch"
+        }
+    ],
+    "minimum-stability": "dev"
+}

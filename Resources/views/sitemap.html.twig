@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+    {% for url in urls %}
+        <url>
+            <loc>{{ url(url.route, url.routeParams) }}</loc>
+            {% if url.lastmod %}
+                <lastmod>{{url.lastmod}}</lastmod>
+            {% endif %}
+            {% if url.changefreq is defined %}
+                <changefreq>{{url.changefreq}}</changefreq>
+            {% endif %}
+            {% if url.priority is defined %}
+                <priority>{{url.priority}}</priority>
+            {% endif %}
+            {% for lang in url.alternativeLang %}
+                <xhtml:link
+                        rel="alternate"
+                        hreflang="{{ lang }}"
+                        href="{{ url(url.route, url.routeParams|merge({'_locale': lang})) }}"
+                        />
+            {% endfor %}
+        </url>
+    {% endfor %}
+</urlset>

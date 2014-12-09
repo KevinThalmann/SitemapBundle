@@ -1,0 +1,3 @@
+ongoing_sitemap_homepage:
+    path:     /hello/{name}
+    defaults: { _controller: OngoingSitemapBundle:Default:index }
