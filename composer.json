@@ -2,7 +2,8 @@
     "name": "ongoing/sitemap-bundle",
     "description": "Generates a sitemap from a yaml configuration file",
     "require": {
-        "symfony/yaml": "~3.0@dev"
+        "php": ">=5.3.2",
+        "symfony/yaml": "~2.6"
     },
     "authors": [
         {
