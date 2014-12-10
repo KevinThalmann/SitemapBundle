@@ -1,14 +1,17 @@
 {
     "name": "ongoing/sitemap-bundle",
     "description": "Generates a sitemap from a yaml configuration file",
-    "require": {
-        "symfony/symfony": "~2.3"
-    },
     "authors": [
         {
             "name": "Kevin Thalmann",
             "email": "kevin.thalmann@ongoing.ch"
         }
     ],
+    "require": {
+        "symfony/symfony": "~2.3"
+    },
+    "autoload": {
+        "psr-4": { "Ongoing\\SitemapBundle\\": "" }
+    },
     "minimum-stability": "stable"
 }
