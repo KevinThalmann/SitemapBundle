@@ -44,6 +44,12 @@ class GenerateSitemapCommand extends ContainerAwareCommand
                 'Use this, if your configuration file is not at default location',
                 'app/Resources/sitemap/paths.yml'
             )
+            ->addOption(
+                'mandateId',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Needs to be set to select correct insertions'
+            )
         ;
     }
 
@@ -55,7 +61,14 @@ class GenerateSitemapCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->em = $this->getContainer()->get('doctrine.orm.entity_manager');
+        $mandateId = $input->getOption('mandateId');
+
+        if ($mandateId) {
+            $this->em = $this->getEntityManagerByMandate((int)$mandateId);
+        } else {
+            $this->em = $this->getContainer()->get('doctrine.orm.entity_manager');
+        }
+
         $this->router = $this->getContainer()->get('router');
 
         $configPath = $this->getConfigPath($input->getOption('configuration'));
@@ -72,12 +85,12 @@ class GenerateSitemapCommand extends ContainerAwareCommand
 
         // Get path to output xml
         if (!isset($fileContents['output'])) {
-            $outputPath = $this->getContainer()->get('kernel')->getRootDir() . '/../web/xml/sitemap.xml';
+            $outputDir = $this->getContainer()->get('kernel')->getRootDir() . '/../web/xml/';
         } else {
-            $outputPath = $fileContents['output'];
+            $outputDir = $fileContents['output'];
         }
 
-        $this->render($urls, $outputPath);
+        $this->render($urls, $outputDir);
     }
 
     /**
@@ -158,7 +171,7 @@ class GenerateSitemapCommand extends ContainerAwareCommand
         if (isset($options['alt_lang'])) {
 
             if (!isset($routeParams['_locale'])) {
-                throw new \Exception('route parameter "_locale" must be defined when alt_lang are given');
+                throw new \Exception('route parameter "_locale" must be defined when alt_lang are defined');
             }
 
             foreach ($options['alt_lang'] as $lang) {
@@ -181,13 +194,18 @@ class GenerateSitemapCommand extends ContainerAwareCommand
      * @param array $urls
      * @param $outputPath
      */
-    private function render(array $urls, $outputPath)
+    private function render(array $urls, $outputDir)
     {
         $xml = $this->getContainer()->get('templating')->render('@OngoingSitemap/sitemap.html.twig', array(
             'urls' => $urls,
         ));
 
-        $outputFile = fopen($outputPath, "w+");
+        // create output folder if doesnt exist
+        if (!file_exists($outputDir)) {
+            mkdir($outputDir);
+        }
+
+        $outputFile = fopen($outputDir . 'sitemap.xml', "w+");
 
         fwrite($outputFile, $xml);
     }
@@ -226,5 +244,23 @@ class GenerateSitemapCommand extends ContainerAwareCommand
         }
 
         return $configPath;
+    }
+
+    /**
+     * @param $mandateId
+     * @return \Doctrine\ORM\EntityManager
+     * @throws \Exception
+     */
+    private function getEntityManagerByMandate($mandateId)
+    {
+        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
+        $filter = $em->getFilters()->enable("multitenancy_filter");
+        $mandate = $em->getRepository("OMSPortalBundle:Website")->find($mandateId);
+        if (!$mandate) {
+            throw new \Exception("Unable to fetch website");
+        }
+        $filter->setParameter('mtm', $mandate->getId());
+
+        return $em;
     }
 } 
