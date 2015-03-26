@@ -12,6 +12,7 @@ namespace Ongoing\SitemapBundle\Command;
 use Doctrine\ORM\EntityManager;
 use Ongoing\SitemapBundle\Entity\Url;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -35,8 +36,13 @@ class GenerateSitemapCommand extends ContainerAwareCommand
     protected function configure()
     {
         $this
-            ->setName('sitemap:generate')
-            ->setDescription('Generates the sitemap')
+            ->setName('og:sitemap:generate')
+            ->setDescription('Generates a sitemap with the configuration provided')
+            ->addArgument(
+                'host',
+                InputArgument::REQUIRED,
+                'Host (eg. ongoing.ch)'
+            )
             ->addOption(
                 'configuration',
                 null,
@@ -61,9 +67,13 @@ class GenerateSitemapCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $mandateId = $input->getOption('mandateId');
+        $this->router = $this->getContainer()->get('router');
 
-        if ($mandateId) {
+        $context = $this->router->getContext();
+        $context->setHost($input->getArgument('host'));
+        $context->setScheme('http');
+
+        if ($mandateId = $input->getOption('mandateId')) {
             $this->em = $this->getEntityManagerByMandate((int)$mandateId);
         } else {
             $this->em = $this->getContainer()->get('doctrine.orm.entity_manager');
@@ -72,7 +82,28 @@ class GenerateSitemapCommand extends ContainerAwareCommand
         $this->router = $this->getContainer()->get('router');
 
         $configPath = $this->getConfigPath($input->getOption('configuration'));
+        $configuration = $this->parse($configPath);
 
+        $urls = $this->getUrls($configuration, $output);
+
+        // Get path to output xml
+        if (!isset($configuration['output'])) {
+            $outputDir = $this->getContainer()->get('kernel')->getRootDir() . '/../web/xml/';
+        } else {
+            $outputDir = $configuration['output'];
+        }
+
+        $this->render($urls, $outputDir);
+    }
+
+    /**
+     * Parse the configuration for the routes
+     *
+     * @param $configPath
+     * @return mixed
+     */
+    private function parse($configPath)
+    {
         $yaml = new Parser();
 
         try {
@@ -81,16 +112,7 @@ class GenerateSitemapCommand extends ContainerAwareCommand
             printf("Unable to parse the YAML string: %s", $e->getMessage());
         }
 
-        $urls = $this->getUrls($fileContents, $output);
-
-        // Get path to output xml
-        if (!isset($fileContents['output'])) {
-            $outputDir = $this->getContainer()->get('kernel')->getRootDir() . '/../web/xml/';
-        } else {
-            $outputDir = $fileContents['output'];
-        }
-
-        $this->render($urls, $outputDir);
+        return $fileContents;
     }
 
     /**
@@ -192,7 +214,7 @@ class GenerateSitemapCommand extends ContainerAwareCommand
 
     /**
      * @param array $urls
-     * @param $outputPath
+     * @param $outputDir
      */
     private function render(array $urls, $outputDir)
     {
@@ -234,6 +256,7 @@ class GenerateSitemapCommand extends ContainerAwareCommand
      *
      * @param $relPath
      * @return string
+     * @throws FileNotFoundException
      */
     private function getConfigPath($relPath)
     {
